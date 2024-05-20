@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Nov 18 19:19:50 2022
-
-@author: italo.tacca
-@author: felipe.batista
-"""
-
 import numpy as np
 from scipy.special import erf, erfinv
 import matplotlib.pyplot as plt
