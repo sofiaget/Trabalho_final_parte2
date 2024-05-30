@@ -3,87 +3,79 @@ from scipy.special import erf, erfinv
 import matplotlib.pyplot as plt
 import math
 
-SNRdb= np.arange(1,36,1) #vetor com os valores de SNR média para o plot
-SNR = np.power(10,SNRdb/10)
-sigmaI=0.04 #turbulence strength
-sigmaX=0.1 
-media=1
+# Define the SNR values for the plot in dB, extending up to 50 dB
+SNRdb = np.arange(1, 51, 1)
+SNR = np.power(10, SNRdb / 10)
 
-#Funções Q e Q^-1
-# Q(f) = 0.5 - 0.5 * erf(x/sqrt(2)) -> Função Q(x)
+# Turbulence strengths
+sigmaI = 0.43
+sigmaX = 0.3
+media = 1
+
+# Q-function and its inverse
 def qfunc(x):
-  return 0.5 - 0.5 * erf(x/np.sqrt(2))
+    return 0.5 - 0.5 * erf(x / np.sqrt(2))
 
-# Q^-1(f) = sqrt(2) * erf^-1(1-2*x) -> Função Q(x) inversa
 def qfuncinv(x):
-  return np.sqrt(2) * erfinv(1 - 2*x)
+    return np.sqrt(2) * erfinv(1 - 2 * x)
 
-# Função de cálculo da eficiência espectral
-def S(x,N, Po, sigmax):
+# Function to calculate spectral efficiency
+def S(x, N, Po, sigmaX):
     resultado = 0
-    for j in range(1,N+1):
-
+    for j in range(1, N + 1):
         if j == 1:
-            I = np.sqrt((1/2*x))*qfuncinv(Po)
-        
+            I = np.sqrt((1 / 2 * x)) * qfuncinv(Po)
         else:
-          M = np.power(2,j)
-          I = (1/np.sin(np.pi/M)) * np.sqrt(1/(2*x))*qfuncinv((np.log2(M)/2)*Po)
-        
-        xj = (np.log(I) + 2*np.power(sigmax,2))/(2*sigmax)
-        resultado += qfunc(xj)
-        print(xj)
-        
-    return resultado/2 
+            M = np.power(2, j)
+            I = (1 / np.sin(np.pi / M)) * np.sqrt(1 / (2 * x)) * qfuncinv((np.log2(M) / 2) * Po)
 
-# Plotando as curvas de eficiência espectral
-# do modelo adaptativo proposto
+        xj = (np.log(I) + 2 * np.power(sigmaX, 2)) / (2 * sigmaX)
+        resultado += qfunc(xj)
+
+    return resultado / 2
+
+# Plotting the curves for the adaptive PSK model
 Ns = np.array([3, 5])
 Pos = np.array([1e-2, 1e-3])
 y = []
-legendas  = []
+legendas = []
 cont = 0
 
-fig1 = plt.figure(figsize=(9, 6))
+fig2 = plt.figure(figsize=(9, 6))
 
 for N in Ns:
-  for Po in Pos:
-    y.append(S(SNR,N,Po,sigmaX))
-    plt.plot(SNRdb,y[cont])
-    legendas.append(f"N = {N} e Po = {Po}")
-    cont += 1
-  
-# Plotando a curva da capacidade do canal
-W = 1 # Considerando a banda unitária
-Cup = (W/2)*(np.log2(SNR/np.e) - (4*sigmaX**2)/np.log(2))
-plt.plot(SNRdb, Cup, '-')
-legendas.append("Cap. do Canal")
+    for Po in Pos:
+        y.append(S(SNR, N, Po, sigmaX))
+        plt.plot(SNRdb, y[cont], marker='o' if N == 3 else 's', linestyle='-', label=f"Adaptive PSK, N={N}, $P_o={Po}$")
+        cont += 1
 
-# Plotando a eficiência espectral do BPSK
+# Plotting the channel capacity curve
+W = 1
+Cup = (W / 2) * (np.log2(SNR / np.e) - (4 * sigmaX**2) / np.log(2))
+plt.plot(SNRdb, Cup, '-', label="High SNR Upper Bound, $C_{up}$")
+
+# Plotting the efficiency of non-adaptive BPSK
 y_bpsk1 = []
 y_bpsk2 = []
 
 for i in SNRdb:
-  if i <= 5.2:
-    y_bpsk1.append(0)
-    y_bpsk2.append(0)
-  elif i > 5.2 and i <= 8:
-     y_bpsk1.append(0.5)
-     y_bpsk2.append(0)
-  else:
-    y_bpsk1.append(0.5)
-    y_bpsk2.append(0.5)
+    if i <= 11:
+        y_bpsk1.append(0)
+        y_bpsk2.append(0)
+    elif i > 11 and i <= 16:
+        y_bpsk1.append(0.5)
+        y_bpsk2.append(0)
+    else:
+        y_bpsk1.append(0.5)
+        y_bpsk2.append(0.5)
 
-plt.plot(SNRdb, y_bpsk1, ':')
-legendas.append("BPSK, Po = 0.01")
-plt.plot(SNRdb, y_bpsk2, ':')
-legendas.append("BPSK, Po = 0.001")
+plt.plot(SNRdb, y_bpsk1, ':', label="Non-adaptive BPSK, $P_o=10^{-2}$")
+plt.plot(SNRdb, y_bpsk2, ':', label="Non-adaptive BPSK, $P_o=10^{-3}$")
 
-
-plt.legend(legendas)
-plt.xlabel('SNR [dB]', fontsize=16)
-plt.ylabel('Eficiência Espectral [bit/s/Hz]', fontsize=16)
-plt.xlim(0,35)
-plt.ylim(0,3)
+plt.legend()
+plt.xlabel('Average Electrical SNR, $\overline{\gamma}$, (dB)', fontsize=16)
+plt.ylabel('Spectral Efficiency (bit/s/Hz)', fontsize=16)
+plt.xlim(0, 50)
+plt.ylim(0, 4)
 plt.grid()
 plt.show()
